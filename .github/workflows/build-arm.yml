@@ -1,0 +1,36 @@
+name: Build ARM release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build, test and package
+        run: sh scripts/build-arm.sh
+
+      - name: Checksum
+        run: cd dist && sha256sum VelvetChords-*.zip | tee SHA256SUM.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VelvetChords-arm
+          path: |
+            dist/VelvetChords-*.zip
+            dist/SHA256SUM.txt
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/VelvetChords-*.zip dist/SHA256SUM.txt --generate-notes
