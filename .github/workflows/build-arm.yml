@@ -19,7 +19,15 @@ jobs:
         run: unzip -q *.zip
 
       - name: Build, test and package
-        run: sh VelvetChords-source/scripts/build-arm.sh
+        run: |
+          cd VelvetChords-source
+          docker run --rm -v "$PWD":/src -w /src debian:bullseye sh -c '
+            echo "deb http://archive.debian.org/debian bullseye main" > /etc/apt/sources.list &&
+            echo "deb http://archive.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list &&
+            apt-get -o Acquire::Check-Valid-Until=false update -qq &&
+            apt-get install -y -qq gcc gcc-arm-linux-gnueabihf libc6-dev-armhf-cross binutils-arm-linux-gnueabihf make python3 zip qemu-user >/dev/null &&
+            make clean && make test && make arm-test && make release'
+          sudo chown -R "$USER" .
 
       - name: Checksum
         run: cd VelvetChords-source/dist && sha256sum VelvetChords-*.zip | tee SHA256SUM.txt
